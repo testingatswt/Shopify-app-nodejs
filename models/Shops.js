@@ -1,10 +1,14 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
-
-// Define collection and schema for Items
 var Shops = new Schema(
     {
+        id: {
+            type: String
+        },
         name: {
+            type: String
+        },
+        shop: {
             type: String
         },
         access_token: {
@@ -14,6 +18,9 @@ var Shops = new Schema(
             type: String
         },
         domain: {
+            type: String
+        },
+        myshopify_domain: {
             type: String
         },
         country_name: {

@@ -7,14 +7,16 @@ const cookie = require('cookie');
 const nonce = require('nonce')();
 const querystring = require('querystring');
 const request = require('request-promise');
+const mongoose = require('mongoose');
+let shopifyApi = require('../helpers/shopifyApi');
 
 const apiKey = process.env.SHOPIFY_API_KEY;
 const apiSecret = process.env.SHOPIFY_API_SECRET;
 const scopes = process.env.SHOPIFY_APP_SCOPES;
 
 const app_url =  process.env.APP_URL;
-
 const Shops = require('../models/Shops');
+const ShopHelper = require('../helpers/Shops');
 
 router.get('/', (req, res) => {
     const shop = req.query.shop;
@@ -80,33 +82,30 @@ router.get('/callback', (req, res) => {
       .then((accessTokenResponse) => {
         const accessToken = accessTokenResponse.access_token;
         // DONE: Use access token to make API call to 'shop' endpoint
-        const shopRequestUrl = 'https://' + shop + '/admin/shop.json';
-        const shopRequestHeaders = {
-          'X-Shopify-Access-Token': accessToken,
-        };
-        request.get(shopRequestUrl, { headers: shopRequestHeaders })
-        .then((shopResponse) => {
-          res.status(200).end(shopResponse);
-          let data1 = {
-            name: shopResponse.shop.name,
-            access_token: shopResponse.shop.access_token,
-            hmac: shopResponse.shop.hmac,
-            domain: shopResponse.shop.domain,
-            country_name: shopResponse.shop.country_name,
-            country_code: shopResponse.shop.country_code,
-            plan_name: shopResponse.shop.plan_name,
-            email: shopResponse.shop.email
-          };
-          save_shop(data1);
-        })
-        .catch((error) => {
-          res.status(error.statusCode).send(error.error.error_description);
-        });
+        let shopify = shopifyApi.shopify(shop,accessToken);
+          shopify.shop.get()
+          .then((shops) => {
+            let shop_data = {
+              id: shops.id,
+              name: shops.name,
+              shop: shop,
+              access_token: accessToken,
+              hmac: hmac,
+              domain: shops.domain,
+              myshopify_domain: shops.myshopify_domain,
+              country_name: shops.country_name,
+              country_code: shops.country_code,
+              plan_name: shops.plan_name,
+              email: shops.email
+            };
+            ShopHelper.save(shop_data);
+            res.redirect(process.env.AFTER_INSTALL_REDIRECT_TO);
+          })
+          .catch(err => console.error(err));
       })
       .catch((error) => {
         res.status(error.statusCode).send(error.error.error_description);
       });
-  
     } else {
       res.status(400).send('Required parameters missing');
     }
